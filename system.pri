@@ -1,0 +1,19 @@
+LIBS += \
+    -ladvapi32 \
+    -lcomdlg32 \
+    -lcomctl32 \
+    -lkernel32 \
+    -lgdi32 \
+    -lglu32 \
+    -lshell32 \
+    -lole32 \
+    -loleaut32 \
+    -lopengl32 \
+    -lodbc32 \
+    -lodbccp32 \
+    -luuid \
+    -luser32 \
+    -lwinspool \
+    -lwsock32 \
+    -lws2_32 \
+    -lPsapi
