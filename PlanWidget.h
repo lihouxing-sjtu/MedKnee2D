@@ -81,6 +81,14 @@ private:
   TYLineWidget *m_htoCutLineSubview;
 
   double m_htoCutAngle;
+  // for rotate
+  vtkSmartPointer<vtkPolyData> m_rotatePlanePd;
+  vtkSmartPointer<vtkActor> m_rotatePlaneActor;
+
+  vtkSmartPointer<vtkPolyData> m_leftPlanePd;
+  vtkSmartPointer<vtkActor> m_leftPlaneActor;
+
+  double m_imagePoints[4][3];
 
 protected:
   void InitializeView();
@@ -101,6 +109,12 @@ protected:
 
   void buildPlanePolyData(double origion[], double spacing[], double point1[],
                           double point2[], vtkPolyData *out);
+  void buildRuledSurface(vtkPoints *up, vtkPoints *down, int xresolution,
+                         int yresolution, vtkPolyData *out);
+  void buildRuledSurface(double p1[], double p2[], double pp1[], double pp2[],
+                         int xresolution, int yresolution, vtkPolyData *out);
+  void getProbData(double origion[], double p1[], double p2[],
+                   vtkPolyData *out);
   virtual void resizeEvent(QResizeEvent *event);
 signals:
   void quitApp();
@@ -131,6 +145,11 @@ protected slots:
   void onQuit();
   void onMinimize();
   void onDataCenter();
+
+  void onRotatePlane();
+  void onHTOCut();
+
+  void onChangeFujisawaProportion();
 };
 
 #endif // PLANWIDGET_H

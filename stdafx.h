@@ -208,7 +208,7 @@
 #include <vtkLinearTransform.h>
 #include <vtkLookupTable.h>
 #include <vtkPlaneSource.h>
-#include <vtkPlaneSource.h>
+#include <vtkRuledSurfaceFilter.h>
 #include <vtkTexturedButtonRepresentation2D.h>
 #include <vtkWindowLevelLookupTable.h>
 

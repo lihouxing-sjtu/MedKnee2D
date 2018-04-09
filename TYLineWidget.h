@@ -32,6 +32,7 @@ public:
   double GetLength();
   void GetDirection(double direction[]);
   void SetOpacity(double op);
+  void setProportion(double proportion);
 
 private:
   Ui::TYLineWidget *ui;

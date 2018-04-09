@@ -140,6 +140,21 @@ void TYLineWidget::SetOpacity(double op) {
   m_render->GetRenderWindow()->Render();
 }
 
+void TYLineWidget::setProportion(double proportion) {
+  double direction[3];
+  for (int i = 0; i < 3; i++) {
+    direction[i] = m_point2[i] - m_point1[i];
+  }
+  vtkMath::Normalize(direction);
+  double distance = sqrt(vtkMath::Distance2BetweenPoints(m_point1, m_point2));
+
+  for (int i = 0; i < 3; i++) {
+    m_origionPoint[i] = m_point1[i] + distance * direction[i] * proportion;
+  }
+  m_origionWidget->SetCenter(m_origionPoint);
+  emit lineChanged(2);
+}
+
 void TYLineWidget::InitializeSphereWidget() {
   m_point1Widget = vtkSmartPointer<vtkSphereWidget>::New();
   this->SetUpSphereWidget(m_point1Widget, m_point1);
