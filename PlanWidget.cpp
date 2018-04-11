@@ -18,7 +18,9 @@ PlanWidget::PlanWidget(QWidget *parent)
   m_ankleAnglekneedown = 0;
   m_kneeupAngleKneedown = 0;
   m_htoCutAngle = 0;
-
+  m_userDefinedRotateAngle = 1101;
+  m_isRightSide = 1;
+  m_isUserDefine = false;
   this->InitializeView();
   this->InitialzeCircleLine();
 
@@ -306,6 +308,16 @@ void PlanWidget::InitialzeCircleLine() {
   m_htoCutLineSubview->SetOpacity(0);
   connect(m_htoCutLineSubview, SIGNAL(lineChanged(int)), this,
           SLOT(onSubHTOCutLineChanged(int)));
+
+  m_htoRotateLine = new TYLineWidget(0, m_mainviewRener, m_mainviewInteractor,
+                                     cutLinePoint, 0.5, 200);
+  double colorGreen[3] = {145 / 255.0, 180 / 255.0, 122 / 255.0};
+  m_htoRotateLine->SetColor(colorGreen);
+  m_htoRotateLine->SetOpacity(0);
+  m_htoRotateLine->SetWidgetOff(true);
+
+  connect(m_htoRotateLine, SIGNAL(lineChanged(int)), this,
+          SLOT(onHtoRotateLineChanged()));
 }
 
 void PlanWidget::ResetFocusCamera(vtkRenderer *ren, double focalPT[],
@@ -555,6 +567,8 @@ void PlanWidget::resetCircleAndLines() {
   m_htoCutLineMainview->SetOrigion(cutLinePoint);
 
   m_htoCutLineSubview->SetOrigion(cutLinePoint);
+
+  m_htoRotateLine->SetOrigion(cutLinePoint);
 }
 
 void PlanWidget::buildPlanePolyData(double origion[], double spacing[],
@@ -1017,6 +1031,33 @@ void PlanWidget::onMainHTOCutLineChanged(int mark) {
     break;
   }
   this->onRotatePlane();
+  double origion[3];
+  double z[3] = {0, 0, 1};
+  m_htoCutLineMainview->GetOrigion(origion);
+  vtkPlane::ProjectPoint(origion, m_imageData->GetOrigin(), z, origion);
+
+  double rotateOrigion[3];
+  m_htoCutLineMainview->GetPoint1(rotateOrigion);
+  vtkPlane::ProjectPoint(rotateOrigion, m_imageData->GetOrigin(), z,
+                         rotateOrigion);
+
+  double angle = ui->RotateAngleSpinBox->value() * m_isRightSide;
+  auto transform = vtkSmartPointer<vtkTransform>::New();
+  transform->Translate(rotateOrigion[0], rotateOrigion[1], rotateOrigion[2]);
+  transform->RotateZ(angle);
+  transform->Translate(-rotateOrigion[0], -rotateOrigion[1], -rotateOrigion[2]);
+  transform->Update();
+
+  double rotatePoint1[3], rotatePoint2[3];
+
+  m_htoCutLineMainview->GetPoint1(rotatePoint1);
+  m_htoCutLineMainview->GetPoint2(rotatePoint2);
+  m_htoRotateLine->SetPoint1and2(rotatePoint1, rotatePoint2);
+  double rotatedRotatePoint2[3];
+  for (int i = 0; i < 3; i++) {
+    rotatedRotatePoint2[i] = transform->TransformDoublePoint(rotatePoint2)[i];
+  }
+  m_htoRotateLine->SetPoint1and2(rotatePoint1, rotatedRotatePoint2);
 }
 
 void PlanWidget::onSubHTOCutLineChanged(int mark) {
@@ -1062,11 +1103,19 @@ void PlanWidget::onHTOButton() {
 
     ui->HTOGroupBox->setDisabled(false);
     this->setHTOMode(true);
+    m_ankleLineMainview->GetOrigion(m_unRotatedAnkleOrigion);
   } else {
     ui->BasicButton->setDisabled(false);
     ui->TKAButton->setDisabled(false);
 
+    m_ankleLineMainview->SetOrigion(m_unRotatedAnkleOrigion);
+
+    if (ui->HTOCutButton->isChecked()) {
+      ui->HTOCutButton->setChecked(false);
+      this->onHTOCut();
+    }
     ui->HTOGroupBox->setDisabled(true);
+
     this->setHTOMode(false);
   }
 }
@@ -1168,7 +1217,7 @@ void PlanWidget::onRotatePlane() {
   // build rotate plane according the cut line and image
 
   this->buildRuledSurface(rotatePlanePoints[0], rotatePlanePoints[1],
-                          fourCornerPoints[3], midPoint, 200, 400,
+                          fourCornerPoints[3], midPoint, 200, 200,
                           m_rotatePlanePd);
 
   double segmentPoint1[3], segmentPoint2[3];
@@ -1236,9 +1285,6 @@ void PlanWidget::onRotatePlane() {
   m_mainviewImageActor->VisibilityOff();
   m_mainviewRenWin->Render();
   qDebug() << "rotated";
-  // prob the image
-
-  // rotate the plane according the angle
 }
 
 void PlanWidget::onHTOCut() {
@@ -1246,9 +1292,9 @@ void PlanWidget::onHTOCut() {
   double z[3] = {0, 0, 1};
   m_htoCutLineMainview->GetOrigion(origion);
   vtkPlane::ProjectPoint(origion, m_imageData->GetOrigin(), z, origion);
-  bool isRightSide = 1;
+
   if (origion[0] > (m_imagePoints[0][0] + m_imagePoints[1][0]) / 2)
-    isRightSide = -1;
+    m_isRightSide = -1;
   double rotateOrigion[3];
   m_htoCutLineMainview->GetPoint1(rotateOrigion);
   vtkPlane::ProjectPoint(rotateOrigion, m_imageData->GetOrigin(), z,
@@ -1308,9 +1354,14 @@ void PlanWidget::onHTOCut() {
   vtkPlane::ProjectPoint(intersectPoint, m_imageData->GetOrigin(), z,
                          intersectPoint);
 
-  double angle = isRightSide * computeVectorAngle(intersectPoint, rotateOrigion,
-                                                  ankleOrigion, rotateOrigion);
+  double angle = computeVectorAngle(intersectPoint, rotateOrigion, ankleOrigion,
+                                    rotateOrigion);
+  qDebug() << "before" << angle;
   if (ui->HTOCutButton->isChecked()) {
+    if (m_isUserDefine)
+      angle = m_userDefinedRotateAngle;
+    angle = angle * m_isRightSide;
+
     ui->HTOCutAngleSpinBox->setEnabled(true);
 
     ui->RotateAngleSpinBox->setValue(angle);
@@ -1327,28 +1378,43 @@ void PlanWidget::onHTOCut() {
     m_ankleLineMainview->SetOrigion(rotatedAnkleOrigion);
 
     m_rotatePlaneActor->SetUserTransform(transform);
+
+    // rotate line appear
+    double rotatePoint1[3], rotatePoint2[3];
+
+    m_htoCutLineMainview->GetPoint1(rotatePoint1);
+    m_htoCutLineMainview->GetPoint2(rotatePoint2);
+
+    double rotatedRotatePoint2[3];
+    for (int i = 0; i < 3; i++) {
+      rotatedRotatePoint2[i] = transform->TransformDoublePoint(rotatePoint2)[i];
+    }
+    if (!m_isUserDefine)
+      m_htoRotateLine->SetPoint1and2(rotatePoint1, rotatedRotatePoint2);
+    m_htoRotateLine->SetOpacity(0.7);
+    m_htoRotateLine->setWidgetOff(2, false);
+
+    m_rotatePlaneActor->VisibilityOn();
+    m_leftPlaneActor->VisibilityOn();
+    m_mainviewImageActor->VisibilityOff();
     m_mainviewRenWin->Render();
+    qDebug() << "checked" << angle;
   } else {
-    angle = ui->RotateAngleSpinBox->value();
+
     ui->RotateAngleSpinBox->setValue(0);
-    auto transform = vtkSmartPointer<vtkTransform>::New();
-    transform->Translate(rotateOrigion[0], rotateOrigion[1], rotateOrigion[2]);
-    transform->RotateZ(-angle);
-    transform->Translate(-rotateOrigion[0], -rotateOrigion[1],
-                         -rotateOrigion[2]);
-    transform->Update();
-    double ankleOrigon[3], rotatedAnkleOrigion[3];
-    m_ankleLineMainview->GetOrigion(ankleOrigon);
-    for (int i = 0; i < 3; i++)
-      rotatedAnkleOrigion[i] = transform->TransformDoublePoint(ankleOrigon)[i];
-    m_ankleLineMainview->SetOrigion(rotatedAnkleOrigion);
+
+    m_ankleLineMainview->SetOrigion(m_unRotatedAnkleOrigion);
+
     auto identifiedTransform = vtkSmartPointer<vtkTransform>::New();
     identifiedTransform->Identity();
     identifiedTransform->Update();
 
     m_rotatePlaneActor->SetUserTransform(identifiedTransform);
+    // rotate line disappear
+    m_htoRotateLine->SetOpacity(0.0);
+    m_htoRotateLine->setWidgetOff(2, true);
     m_mainviewRenWin->Render();
-    qDebug() << angle;
+    qDebug() << "unchecked" << angle;
   }
   this->upDateBasicConnectLines();
 }
@@ -1357,4 +1423,30 @@ void PlanWidget::onChangeFujisawaProportion() {
   double proportion = ui->FujisawaPositionSlider->value() / 1000.0;
   m_fujisawaLineMainview->setProportion(proportion);
   ui->FujisawaPositionSpinBox->setValue(proportion);
+}
+
+void PlanWidget::onHtoRotateLineChanged() {
+  double rotateLinePoint1[3], rotateLinePoint2[3];
+  double cutLinePoint1[3], cutLinePoint2[3];
+
+  m_htoRotateLine->GetPoint1(rotateLinePoint1);
+  m_htoRotateLine->GetPoint2(rotateLinePoint2);
+
+  m_htoCutLineMainview->GetPoint1(cutLinePoint1);
+  m_htoCutLineMainview->GetPoint2(cutLinePoint2);
+
+  m_userDefinedRotateAngle = computeVectorAngle(
+      rotateLinePoint2, rotateLinePoint1, cutLinePoint2, cutLinePoint1);
+
+  // limit the point2 position
+  ui->RotateAngleSpinBox->setValue(m_userDefinedRotateAngle);
+  this->onMainHTOCutLineChanged(4);
+
+  ui->HTOCutButton->setChecked(false);
+  this->onHTOCut();
+
+  ui->HTOCutButton->setChecked(true);
+  m_isUserDefine = true;
+  this->onHTOCut();
+  m_isUserDefine = false;
 }

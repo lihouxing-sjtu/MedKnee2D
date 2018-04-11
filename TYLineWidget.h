@@ -33,6 +33,9 @@ public:
   void GetDirection(double direction[]);
   void SetOpacity(double op);
   void setProportion(double proportion);
+  // index 1->point1 index 2->point2 index 0->origion, if isOff=true, the widget
+  // will be off
+  void setWidgetOff(int index, bool isOff);
 
 private:
   Ui::TYLineWidget *ui;

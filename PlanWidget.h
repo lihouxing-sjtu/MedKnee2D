@@ -88,7 +88,13 @@ private:
   vtkSmartPointer<vtkPolyData> m_leftPlanePd;
   vtkSmartPointer<vtkActor> m_leftPlaneActor;
 
+  TYLineWidget *m_htoRotateLine;
   double m_imagePoints[4][3];
+  double m_userDefinedRotateAngle;
+  double m_isRightSide;
+
+  bool m_isUserDefine;
+  double m_unRotatedAnkleOrigion[3];
 
 protected:
   void InitializeView();
@@ -150,6 +156,7 @@ protected slots:
   void onHTOCut();
 
   void onChangeFujisawaProportion();
+  void onHtoRotateLineChanged();
 };
 
 #endif // PLANWIDGET_H

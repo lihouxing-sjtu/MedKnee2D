@@ -155,6 +155,38 @@ void TYLineWidget::setProportion(double proportion) {
   emit lineChanged(2);
 }
 
+void TYLineWidget::setWidgetOff(int index, bool isOff) {
+  if (isOff) {
+    switch (index) {
+    case 1:
+      m_point1Widget->Off();
+      break;
+    case 2:
+      m_point2Widget->Off();
+      break;
+    case 0:
+      m_origionWidget->Off();
+      break;
+    default:
+      break;
+    }
+  } else {
+    switch (index) {
+    case 1:
+      m_point1Widget->On();
+      break;
+    case 2:
+      m_point2Widget->On();
+      break;
+    case 0:
+      m_origionWidget->On();
+      break;
+    default:
+      break;
+    }
+  }
+}
+
 void TYLineWidget::InitializeSphereWidget() {
   m_point1Widget = vtkSmartPointer<vtkSphereWidget>::New();
   this->SetUpSphereWidget(m_point1Widget, m_point1);
